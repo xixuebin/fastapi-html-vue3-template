@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>文件管理</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <style>
     body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; margin: 40px; }
     .uploader {
@@ -18,9 +20,42 @@
     .hint { color: #999; font-size: 12px; margin-top: 6px; }
     .error { color: #d93025; margin-top: 10px; }
     .success { color: #2e7d32; margin-top: 10px; }
-    ul.files { margin-top: 16px; padding-left: 18px; }
-    ul.files li { margin: 4px 0; }
-    ul.files small { color: #888; margin-left: 8px; }
+
+    .files-grid {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-gap: 15px;
+    }
+    .file-item {
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 12px;
+      transition: all 0.3s;
+    }
+    .file-item:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .file-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 10px;
+    }
+    .file-actions a {
+      color: #409eff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .file-actions a.delete {
+      color: #f56c6c;
+    }
+    .file-info {
+      display: flex;
+      justify-content: space-between;
+      color: #888;
+      font-size: 13px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -41,15 +76,27 @@
     <div v-if="error" class="error">{{ error }}</div>
     <div v-if="success" class="success">{{ success }}</div>
 
-    <ul class="files" v-if="files.length">
-      <li v-for="file in files" :key="file.name">
-        <strong>{{ file.name }}</strong>
-        <small>({{ file.size }} bytes)</small>
-      </li>
-    </ul>
+    <h2 style="margin-top: 24px;">已上传文件</h2>
+
+    <div v-if="files.length > 0" class="files-grid">
+      <div class="file-item" v-for="file in sortedFiles" :key="file.name">
+        <div class="file-name">
+          <a :href="file.path" target="_blank"><strong>{{ file.name }}</strong></a>
+        </div>
+        <div class="file-info">
+          <span>{{ formatSize(file.size) }}</span>
+          <span>{{ formatDate(file.modified) }}</span>
+        </div>
+        <div class="file-actions">
+          <a :href="file.path" target="_blank">下载</a>
+          <a href="javascript:void(0)" class="delete" @click="deleteFile(file.name)">删除</a>
+        </div>
+      </div>
+    </div>
+    <div v-else style="color:#aaa;margin-top:16px;">暂无已上传文件</div>
   </div>
 
-  <script src="https://unpkg.com/vue@3"></script>
+  <script src="/static/js/utils.js"></script>
   <script>
     const { createApp } = Vue;
     createApp({
@@ -63,42 +110,52 @@
         };
       },
       mounted() {
-        // 检查用户登录状态
-        fetch('/api/files', {
-          credentials: 'include'
-        })
-        .then(response => {
-          if (response.status === 401) {
-            // 用户未登录，重定向到登录页面
-            window.location.href = '/static/login.html';
-            return;
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data && data.files) {
-            this.files = data.files;
-          }
-        })
-        .catch(err => {
-          console.error('获取文件列表失败：', err);
-          this.error = '获取文件列表失败';
-        });
+        // 检查用户登录状态并加载文件列表
+        this.loadFiles();
 
-        // 监听来自父页面的消息
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'USER_INFO') {
-                // 接收父页面发送的用户信息
-                this.username = event.data.username;
-            }
-        });
-
-        // 请求父页面发送用户信息
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage({type: 'GET_USER_INFO'}, '*');
+        // 处理与父页面的通信
+        if (window.AuthUtils) {
+          AuthUtils.handleParentCommunication((username) => {
+            this.username = username;
+          });
         }
       },
       methods: {
+        formatSize(bytes) {
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        formatDate(timestamp) {
+          const date = new Date(timestamp);
+          return date.getFullYear() + '-' +
+                 String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                 String(date.getDate()).padStart(2, '0') + ' ' +
+                 String(date.getHours()).padStart(2, '0') + ':' +
+                 String(date.getMinutes()).padStart(2, '0') + ':' +
+                 String(date.getSeconds()).padStart(2, '0');
+        },
+        async loadFiles() {
+          try {
+            const response = await fetch('/api/files', {
+              credentials: 'include'
+            });
+
+            if (response.status === 401) {
+              // 用户未登录，重定向到登录页面
+              window.location.href = '/static/login.html';
+              return;
+            }
+
+            const data = await response.json();
+            if (data && data.files) {
+              this.files = data.files;
+            }
+          } catch (err) {
+            console.error('获取文件列表失败：', err);
+            this.error = '获取文件列表失败';
+          }
+        },
         onDragOver() {
           this.dragging = true;
         },
@@ -137,22 +194,61 @@
             });
 
             if (response.ok) {
-              this.success = '文件上传成功';
-              // 更新文件列表
               const data = await response.json();
-              if (data && data.files) {
-                this.files = data.files;
+              if (data && data.success) {
+                this.success = data.message || '文件上传成功';
+                // 更新文件列表
+                this.loadFiles();
+              } else {
+                this.error = data.detail || '上传失败';
               }
             } else if (response.status === 401) {
               // 用户未登录，重定向到登录页面
               window.location.href = '/static/login.html';
             } else {
-              this.error = '上传失败';
+              const errorData = await response.json();
+              this.error = errorData.detail || '上传失败';
             }
           } catch (err) {
             console.error('上传失败：', err);
             this.error = '上传失败';
           }
+        },
+        async deleteFile(filename) {
+          if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
+
+          try {
+            const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+              method: 'DELETE',
+              credentials: 'include'
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.success) {
+                this.success = data.message || `文件 "${filename}" 已删除`;
+                // 更新文件列表
+                this.loadFiles();
+              } else {
+                this.error = data.detail || '删除失败';
+              }
+            } else if (response.status === 401) {
+              window.location.href = '/static/login.html';
+            } else if (response.status === 404) {
+              this.error = '文件不存在';
+            } else {
+              const errorData = await response.json();
+              this.error = errorData.detail || '删除文件失败';
+            }
+          } catch (err) {
+            console.error('删除文件失败：', err);
+            this.error = '删除文件失败';
+          }
+        }
+      },
+      computed: {
+        sortedFiles() {
+          return this.files.slice().sort((a, b) => new Date(b.modified) - new Date(a.modified));
         }
       }
     }).mount('#app');

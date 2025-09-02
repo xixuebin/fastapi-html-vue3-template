@@ -2,14 +2,15 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>页面二</title>
+    <title>页面模板</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/vue@3"></script>
 </head>
 <body>
 <div id="app">
     <div class="page-content">
-        <h2>页面二</h2>
+        <h2>{{ pageTitle }}</h2>
+        <!-- 在此处添加页面内容 -->
         <div v-if="username">欢迎，{{ username }}！</div>
         <div v-else class="error">未登录</div>
     </div>
@@ -20,12 +21,15 @@ const { createApp } = Vue;
 createApp({
     data() {
         return {
-            username: ''
+            pageTitle: '页面标题',
+            username: '',
+            // 在此处添加页面特定的数据属性
         }
     },
     async mounted() {
         // 检查用户登录状态
-        const authResult = await AuthUtils.checkLoginStatus('/api/page2');
+        // 注意：需要根据实际 API 端点修改 URL
+        const authResult = await AuthUtils.checkLoginStatus('/api/page');
         
         if (authResult.loggedIn) {
             this.username = authResult.username;
@@ -35,6 +39,9 @@ createApp({
         AuthUtils.handleParentCommunication((username) => {
             this.username = username;
         });
+    },
+    methods: {
+        // 在此处添加页面特定的方法
     }
 }).mount('#app');
 </script>

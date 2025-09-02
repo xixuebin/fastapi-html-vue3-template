@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Form, status
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 
-from com.offer.ops.security.auth import requires_login
+from src.com.offer.ops.security.auth import requires_login
 
 router = APIRouter()
 

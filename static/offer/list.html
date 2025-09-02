@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Offer 列表</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/static/utils.js"></script>
     <script src="https://unpkg.com/vue@3"></script>
 </head>
 <body>
@@ -33,54 +34,34 @@ createApp({
         }
     },
     async mounted() {
-        // 检查用户登录状态并获取数据
         try {
-            // 首先检查登录状态
-            const authResponse = await fetch('/api/offer/list', {
-                credentials: 'include'
-            });
+            // 使用统一的认证验证
+            const response = await AuthUtils.validateAuth('/api/offer/list');
             
-            if (authResponse.status === 401) {
-                // 用户未登录，重定向到登录页面
+            if (!response.success) {
                 window.location.href = '/static/login.html';
                 return;
             }
             
-            // 获取offer列表数据
-            const dataResponse = await fetch('/api/offer/list', {
-                credentials: 'include'
-            });
+            // 使用统一的错误处理
+            const data = await ErrorHandler.handleAsyncCall(() => 
+                fetch('/api/offer/list', { credentials: 'include' })
+            );
             
-            if (dataResponse.status === 401) {
-                // 用户未登录，重定向到登录页面
-                window.location.href = '/static/login.html';
-                return;
-            }
-            
-            const data = await dataResponse.json();
             this.offers = data.offers || [];
             
-            // 获取用户名
             if (data.success) {
                 this.username = data.username || '';
             }
         } catch (error) {
-            console.error('检查登录状态或获取数据时出错:', error);
-            window.location.href = '/static/login.html';
+            ErrorHandler.handleGlobalError(error);
+            return;
         }
         
-        // 监听来自父页面的消息
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'USER_INFO') {
-                // 接收父页面发送的用户信息
-                this.username = event.data.username;
-            }
+        // 使用统一的父子页面通信处理
+        AuthUtils.handleParentCommunication((username) => {
+            this.username = username;
         });
-        
-        // 请求父页面发送用户信息
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage({type: 'GET_USER_INFO'}, '*');
-        }
     }
 }).mount('#app');
 </script>

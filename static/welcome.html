@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>欢迎页</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/css/style.css">
     <script src="https://unpkg.com/vue@3"></script>
 </head>
 <body>
@@ -42,7 +42,7 @@ createApp({
                 window.location.href = '/static/login.html';
             }
         } catch (error) {
-            console.error('检查登录状态时出错:', error);
+            console.error('检查登录状态时出错：', error);
             window.location.href = '/static/login.html';
         }
         
