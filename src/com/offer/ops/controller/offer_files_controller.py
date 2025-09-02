@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 
-from src.com.offer.ops.security.auth import requires_login, requires_api_token
+from src.com.offer.ops.security.auth import requires_login
 
 # 定义上传文件夹和允许的文件扩展名
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../uploads")
@@ -51,7 +51,7 @@ async def list_files(request: Request):
 # 文件上传 API
 @router.post("/api/files/upload", response_class=JSONResponse, operation_id="upload_file")
 @requires_login()
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(request: Request,file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="没有文件上传")
 
@@ -74,7 +74,7 @@ async def upload_file(file: UploadFile = File(...)):
 # 文件下载 API
 @router.get("/files/download/{filename}", operation_id="download_file")
 @requires_login()
-async def download_file(filename: str):
+async def download_file(request: Request,filename: str):
     file_path = os.path.join(UPLOAD_FOLDER, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="文件不存在")
@@ -87,8 +87,8 @@ async def download_file(filename: str):
 
 # 删除文件 API
 @router.delete("/api/files/{filename}", response_class=JSONResponse, operation_id="delete_file")
-@requires_login
-async def delete_file(filename: str):
+@requires_login()
+async def delete_file(request: Request, filename: str):
     file_path = os.path.join(UPLOAD_FOLDER, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="文件不存在")

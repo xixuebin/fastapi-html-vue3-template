@@ -1,14 +1,11 @@
-<!DOCTYPE html>
-<html lang="zh">
+<!doctype html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>文件管理</title>
-  <link rel="stylesheet" href="/static/style.css">
   <style>
-    .main-content {
-      padding: 20px;
-    }
+    body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; margin: 40px; }
     .uploader {
       margin-top: 20px; border: 2px dashed #bbb; border-radius: 8px; padding: 24px;
       text-align: center; color: #666; transition: all .2s ease-in-out;
@@ -21,84 +18,35 @@
     .hint { color: #999; font-size: 12px; margin-top: 6px; }
     .error { color: #d93025; margin-top: 10px; }
     .success { color: #2e7d32; margin-top: 10px; }
-    .files-grid {
-      margin-top: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      grid-gap: 15px;
-    }
-    .file-item {
-      border: 1px solid #eee;
-      border-radius: 4px;
-      padding: 12px;
-      transition: all 0.3s;
-    }
-    .file-item:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .file-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 10px;
-    }
-    .file-actions a {
-      color: #409eff;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .file-actions a.delete {
-      color: #f56c6c;
-    }
-    .file-info {
-      display: flex;
-      justify-content: space-between;
-      color: #888;
-      font-size: 13px;
-      margin-top: 5px;
-    }
+    ul.files { margin-top: 16px; padding-left: 18px; }
+    ul.files li { margin: 4px 0; }
+    ul.files small { color: #888; margin-left: 8px; }
   </style>
 </head>
 <body>
+  <h1>文件管理</h1>
   <div id="app">
-    <div v-if="!loggedIn" class="login-redirect">
-      <p>请先登录系统</p>
-      <p><a href="/static/login.html">前往登录</a></p>
+    <div class="uploader" :class="{ dragging }"
+         @dragover.prevent="onDragOver"
+         @dragleave.prevent="onDragLeave"
+         @drop.prevent="onDrop">
+      <div>拖拽 CSV 文件到此处，或</div>
+      <label class="btn">
+        点击选择
+        <input type="file" accept=".csv" @change="onSelect" hidden />
+      </label>
+      <div class="hint">仅支持 .csv 文件</div>
     </div>
-    <div v-else class="main-content">
-      <h1>文件管理</h1>
 
-      <div class="uploader" :class="{ dragging }"
-           @dragover.prevent="onDragOver"
-           @dragleave.prevent="onDragLeave"
-           @drop.prevent="onDrop">
-        <div>拖拽文件到此处，或</div>
-        <label class="btn">
-          点击选择
-          <input type="file" @change="onSelect" hidden />
-        </label>
-        <div class="hint">支持的文件类型：CSV</div>
-      </div>
+    <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="success" class="success">{{ success }}</div>
 
-      <div v-if="error" class="error">{{ error }}</div>
-      <div v-if="success" class="success">{{ success }}</div>
-
-      <h2 style="margin-top: 24px;">已上传文件</h2>
-
-      <div v-if="sortedFiles.length > 0" class="files-grid">
-        <div class="file-item" v-for="file in sortedFiles" :key="file.name">
-          <div class="file-name">{{ file.name }}</div>
-          <div class="file-info">
-            <span>{{ formatSize(file.size) }}</span>
-            <span>{{ file.modified }}</span>
-          </div>
-          <div class="file-actions">
-            <a :href="file.path" target="_blank">下载</a>
-            <a href="javascript:void(0)" class="delete" @click="deleteFile(file.name)">删除</a>
-          </div>
-        </div>
-      </div>
-      <div v-else style="color:#aaa;margin-top:16px;">暂无已上传文件</div>
-    </div>
+    <ul class="files" v-if="files.length">
+      <li v-for="file in files" :key="file.name">
+        <strong>{{ file.name }}</strong>
+        <small>({{ file.size }} bytes)</small>
+      </li>
+    </ul>
   </div>
 
   <script src="https://unpkg.com/vue@3"></script>
@@ -107,154 +55,105 @@
     createApp({
       data() {
         return {
-          files: [],
           dragging: false,
           error: '',
           success: '',
-          loggedIn: false
+          files: [],
+          username: ''
         };
       },
-      computed: {
-        sortedFiles() {
-          // 按修改时间倒序排列
-          return [...this.files].sort((a, b) =>
-            new Date(b.modified) - new Date(a.modified)
-          );
+      mounted() {
+        // 检查用户登录状态
+        fetch('/api/files', {
+          credentials: 'include'
+        })
+        .then(response => {
+          if (response.status === 401) {
+            // 用户未登录，重定向到登录页面
+            window.location.href = '/static/login.html';
+            return;
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data && data.files) {
+            this.files = data.files;
+          }
+        })
+        .catch(err => {
+          console.error('获取文件列表失败：', err);
+          this.error = '获取文件列表失败';
+        });
+
+        // 监听来自父页面的消息
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'USER_INFO') {
+                // 接收父页面发送的用户信息
+                this.username = event.data.username;
+            }
+        });
+
+        // 请求父页面发送用户信息
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({type: 'GET_USER_INFO'}, '*');
         }
       },
       methods: {
-        formatSize(bytes) {
-          if (bytes < 1024) return bytes + ' B';
-          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        onDragOver() {
+          this.dragging = true;
         },
-        async checkLoginStatus() {
-          try {
-            const response = await fetch('/api/home', {
-              credentials: 'include' // 确保发送cookies
-            });
-
-            if (response.status === 401) {
-              this.loggedIn = false;
-              return;
-            }
-
-            const data = await response.json();
-            if (data.success) {
-              this.loggedIn = true;
-              this.fetchFiles();
-            } else {
-              this.loggedIn = false;
-            }
-          } catch (error) {
-            console.error('检查登录状态出错:', error);
-            this.loggedIn = false;
+        onDragLeave() {
+          this.dragging = false;
+        },
+        async onDrop(e) {
+          this.dragging = false;
+          const file = e.dataTransfer.files[0];
+          if (file && file.name.endsWith('.csv')) {
+            await this.uploadFile(file);
+          } else {
+            this.error = '请上传 .csv 文件';
           }
         },
-        async fetchFiles() {
-          try {
-            const response = await fetch('/api/files', {
-              credentials: 'include',
-              headers: {
-                'X-API-Token': localStorage.getItem('api_token') || ''
-              }
-            });
-
-            if (response.status === 401) {
-              this.error = '获取文件列表失败: 未授权';
-              return;
-            }
-
-            const data = await response.json();
-            this.files = data.files || [];
-          } catch (e) {
-            this.error = '获取文件列表失败: ' + (e.message || '未知错误');
+        onSelect(e) {
+          const file = e.target.files[0];
+          if (file && file.name.endsWith('.csv')) {
+            this.uploadFile(file);
+          } else {
+            this.error = '请上传 .csv 文件';
           }
         },
         async uploadFile(file) {
-          if (!file) return;
           this.error = '';
           this.success = '';
 
-          const allowedExt = ['csv'];
-          const ext = file.name.split('.').pop().toLowerCase();
-
-          if (!allowedExt.includes(ext)) {
-            this.error = `不支持的文件类型: ${ext}`;
-            return;
-          }
-
-          const fd = new FormData();
-          fd.append('file', file);
+          const formData = new FormData();
+          formData.append('file', file);
 
           try {
             const response = await fetch('/api/files/upload', {
               method: 'POST',
-              body: fd,
+              body: formData,
               credentials: 'include'
             });
 
-            if (response.status === 401) {
-              this.error = '上传失败: 未授权';
-              return;
-            }
-
-            const data = await response.json();
-            if (!response.ok) {
-              this.error = data.detail || '上传失败';
-              return;
-            }
-
-            this.success = `上传成功: ${file.name}`;
-            await this.fetchFiles();
-          } catch (e) {
-            this.error = '上传失败: ' + (e.message || '未知错误');
-          }
-        },
-        async deleteFile(filename) {
-          if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
-
-          try {
-            const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
-              method: 'DELETE',
-              credentials: 'include',
-              headers: {
-                'X-API-Token': localStorage.getItem('api_token') || ''
-              }
-            });
-
-            if (response.status === 401) {
-              this.error = '删除失败: 未授权';
-              return;
-            }
-
-            if (!response.ok) {
+            if (response.ok) {
+              this.success = '文件上传成功';
+              // 更新文件列表
               const data = await response.json();
-              this.error = data.detail || '删除失败';
-              return;
+              if (data && data.files) {
+                this.files = data.files;
+              }
+            } else if (response.status === 401) {
+              // 用户未登录，重定向到登录页面
+              window.location.href = '/static/login.html';
+            } else {
+              this.error = '上传失败';
             }
-
-            this.success = `文件 "${filename}" 已删除`;
-            await this.fetchFiles();
-          } catch (e) {
-            this.error = '删除失败: ' + (e.message || '未知错误');
+          } catch (err) {
+            console.error('上传失败：', err);
+            this.error = '上传失败';
           }
-        },
-        onSelect(e) {
-          const file = e.target.files && e.target.files[0];
-          if (file) this.uploadFile(file);
-          e.target.value = '';
-        },
-        onDrop(e) {
-          const files = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : [];
-          files.forEach(f => this.uploadFile(f));
-          this.dragging = false;
-        },
-        onDragOver() { this.dragging = true; },
-        onDragLeave() { this.dragging = false; }
-      },
-      mounted() {
-        this.checkLoginStatus();
+        }
       }
     }).mount('#app');
   </script>
