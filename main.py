@@ -12,8 +12,21 @@ from src.com.offer.ops.controller.secure_api_controller import router as secure_
 from src.com.offer.ops.middleware.static_middleware import AuthenticatedStaticFiles
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="supersecretkey")
-# 添加认证静态文件中间件，在 session 中间件之后添加
+
+# 先包含所有 API 路由
+app.include_router(user_router)
+app.include_router(page_router)
+app.include_router(hello_router)
+app.include_router(offer_router)
+app.include_router(public_api_router)
+app.include_router(secure_api_router)
+
+# 将静态文件挂载放在最后，避免影响 API 路由
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/", StaticFiles(directory="static", html=True), name="root")
+
+# 中间件添加顺序很重要，它们会按照相反的顺序执行
+# 先添加自定义静态文件中间件，确保它在会话中间件之后执行
 app.add_middleware(
     AuthenticatedStaticFiles,
     static_dir="static",
@@ -25,17 +38,8 @@ app.add_middleware(
     }
 )
 
-# 先包含所有 API 路由
-app.include_router(user_router)
-app.include_router(page_router)
-app.include_router(hello_router)
-app.include_router(offer_router)
-app.include_router(public_api_router)
-app.include_router(secure_api_router)
-
-# 将静态文件挂载放在最后，避免影响 API 路由
-# app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/", StaticFiles(directory="static", html=True), name="root")
+# 最后添加会话中间件，确保它最先执行
+app.add_middleware(SessionMiddleware, secret_key="supersecretkey")
 
 mcp_app = FastApiMCP(app)
 mcp_app.mount_http()
