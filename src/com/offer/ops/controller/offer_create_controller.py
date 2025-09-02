@@ -2,6 +2,8 @@ from fastapi import APIRouter, Request, Form, status
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from com.offer.ops.security.auth import requires_login
+
 # 修改模板目录为正确的位置
 templates = Jinja2Templates(directory="offer_create")
 router = APIRouter()
@@ -12,13 +14,13 @@ mock_offers = [
     {"title": "Offer B", "desc": "描述 B"}
 ]
 
-
-
 @router.post("/offer/create", response_class=HTMLResponse, operation_id="offer_create_submit")
+@requires_login
 async def offer_create_submit(request: Request, title: str = Form(...), desc: str = Form(...)):
     mock_offers.append({"title": title, "desc": desc})
     return RedirectResponse(url="/offer/list", status_code=status.HTTP_302_FOUND)
 
 @router.get("/api/offer/list", response_class=JSONResponse, operation_id="offer_list_api")
+@requires_login
 async def offer_list_api():
     return {"offers": mock_offers}

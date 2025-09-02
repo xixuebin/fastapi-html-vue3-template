@@ -7,28 +7,20 @@ router = APIRouter()
 @router.get("/api/home", response_class=JSONResponse, operation_id="home_page")
 async def home_page(request: Request):
     username = request.session.get("user")
-    if not username:
-        return {"success": False, "error": "未登录"}
     menus = menu_service.load_menus()
     return {"success": True, "username": username, "menus": menus}
 
 @router.get("/api/welcome", response_class=JSONResponse, operation_id="welcome_page")
 async def welcome_page(request: Request):
     username = request.session.get("user")
-    if not username:
-        return {"success": False, "error": "未登录"}
     return {"success": True, "username": username}
 
 @router.get("/api/page1", response_class=JSONResponse, operation_id="page1")
 async def page1(request: Request):
     username = request.session.get("user")
-    if not username:
-        return {"success": False, "error": "未登录"}
     return {"success": True, "username": username}
 
 @router.get("/api/page2", response_class=JSONResponse, operation_id="page2")
 async def page2(request: Request):
     username = request.session.get("user")
-    if not username:
-        return {"success": False, "error": "未登录"}
     return {"success": True, "username": username}

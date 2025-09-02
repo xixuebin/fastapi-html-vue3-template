@@ -22,17 +22,31 @@ createApp({
             username: ''
         }
     },
-    mounted() {
-        fetch('/api/page1')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    this.username = data.username;
-                }
+    async mounted() {
+        // 检查用户登录状态
+        try {
+            const response = await fetch('/api/page1', {
+                credentials: 'include'
             });
+            
+            if (response.status === 401) {
+                // 用户未登录，重定向到登录页面
+                window.location.href = '/static/login.html';
+                return;
+            }
+            
+            const data = await response.json();
+            if (data.success) {
+                this.username = data.username;
+            } else {
+                window.location.href = '/static/login.html';
+            }
+        } catch (error) {
+            console.error('检查登录状态时出错:', error);
+            window.location.href = '/static/login.html';
+        }
     }
 }).mount('#app');
 </script>
 </body>
 </html>
-

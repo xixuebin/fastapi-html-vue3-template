@@ -4,6 +4,8 @@ users:
   - username: test
     password: test123
 
+api_token: "sk-1234567890abcdef"
+
 menus:
   - id: welcome
     title: 主页
