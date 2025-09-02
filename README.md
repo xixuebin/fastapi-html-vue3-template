@@ -1,4 +1,4 @@
-# AAD Offer Operations 后台管理系统
+# AD Offer Operations 后台管理系统
 
 这是一个基于 FastAPI 框架开发的 Offer 管理后台系统，提供了用户认证、页面访问控制、文件管理等功能。该项目采用前后端分离设计，后端使用 FastAPI 提供 API 服务，前端使用 HTML、CSS、JavaScript 以及 Vue.js 实现用户界面。
 
