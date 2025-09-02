@@ -1,8 +1,6 @@
 fastapi
 fastapi-mcp
 uvicorn
-jinja2
 pyyaml
 itsdangerous
 starlette
-

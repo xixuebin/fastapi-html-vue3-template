@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>页面一</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/vue@3"></script>
+</head>
+<body>
+<div id="app">
+    <div class="page-content">
+        <h2>页面一</h2>
+        <div v-if="username">欢迎，{{ username }}！</div>
+        <div v-else class="error">未登录</div>
+    </div>
+</div>
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            username: ''
+        }
+    },
+    mounted() {
+        fetch('/api/page1')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    this.username = data.username;
+                }
+            });
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
+

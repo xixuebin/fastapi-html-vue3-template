@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/vue@3"></script>
+</head>
+<body>
+<div id="app">
+    <div class="layout">
+        <aside class="sidebar">
+            <h3>管理系统</h3>
+            <nav class="menu">
+                <template v-for="menu in menus">
+                    <div v-if="menu.children" class="menu-group">
+                        <div class="menu-group-title" @click="toggleSubMenu(menu.id)" style="cursor:pointer;">
+                            {{ menu.title }}
+                            <span :id="'arrow-' + menu.id" style="float:right;transition:transform 0.2s;">&#9654;</span>
+                        </div>
+                        <ul class="menu-sub" :id="'menu-sub-' + menu.id" :class="{show: menu.open}">
+                            <li v-for="child in menu.children" :key="child.id">
+                                <a href="javascript:void(0);" @click="openTab(child)">{{ child.title }}</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <a v-else href="javascript:void(0);" @click="openTab(menu)">{{ menu.title }}</a>
+                </template>
+            </nav>
+        </aside>
+        <main class="main">
+            <div class="topbar">
+                <div class="user-info">
+                    <span>欢迎，{{ username }}</span>
+                    <a href="/static/login.html" class="logout">退出</a>
+                </div>
+            </div>
+            <div class="content">
+                <iframe v-if="activeTabUrl" :src="activeTabUrl" frameborder="0"></iframe>
+                <div v-else class="welcome">请选择菜单项</div>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            menus: [],
+            username: '',
+            tabs: [],
+            activeTab: '',
+            activeTabUrl: ''
+        }
+    },
+    methods: {
+        openTab(menu) {
+            const existingTab = this.tabs.find(tab => tab.id === menu.id);
+            if (existingTab) {
+                this.setActiveTab(menu.id);
+            } else {
+                this.tabs.push({
+                    id: menu.id,
+                    title: menu.title,
+                    url: menu.url
+                });
+                this.setActiveTab(menu.id);
+            }
+        },
+        closeTab(tabId) {
+            const idx = this.tabs.findIndex(tab => tab.id === tabId);
+            if (idx >= 0) {
+                this.tabs.splice(idx, 1);
+                if (this.activeTab === tabId) {
+                    if (this.tabs.length > 0) {
+                        this.setActiveTab(this.tabs[Math.max(0, idx-1)].id);
+                    } else {
+                        this.activeTab = '';
+                        this.activeTabUrl = '';
+                    }
+                }
+            }
+        },
+        setActiveTab(tabId) {
+            this.activeTab = tabId;
+            const tab = this.tabs.find(tab => tab.id === tabId);
+            this.activeTabUrl = tab ? tab.url : '';
+        },
+        toggleSubMenu(menuId) {
+            const menu = this.menus.find(m => m.id === menuId);
+            if (menu) {
+                menu.open = !menu.open;
+                // 更新箭头图标
+                const arrow = document.getElementById('arrow-' + menuId);
+                if (arrow) {
+                    arrow.style.transform = menu.open ? 'rotate(90deg)' : 'rotate(0deg)';
+                }
+            }
+        }
+    },
+    async mounted() {
+        try {
+            const response = await fetch('/api/home');
+            const data = await response.json();
+
+            if (data.success) {
+                this.username = data.username;
+                this.menus = data.menus;
+
+                // 处理菜单 URL，移除 static 前缀
+                const processMenuUrls = (menuItems) => {
+                    menuItems.forEach(menu => {
+                        if (menu.url) {
+                            // 移除 URL 中的 static 前缀
+                            if (menu.url.startsWith('/static/')) {
+                                menu.url = menu.url.substring(8); // 移除'/static/'前缀
+                            }
+                            // 确保 URL 以'/'开头
+                            if (menu.url && !menu.url.startsWith('/')) {
+                                menu.url = '/' + menu.url;
+                            }
+                        }
+                        if (menu.children) {
+                            processMenuUrls(menu.children);
+                        }
+                    });
+                };
+
+                processMenuUrls(this.menus);
+
+                // 打开默认菜单项
+                const defaultMenu = this.menus.find(menu => menu.default);
+                if (defaultMenu) {
+                    this.openTab(defaultMenu);
+                } else if (this.menus.length > 0) {
+                    this.openTab(this.menus[0]);
+                }
+            } else {
+                console.error('获取菜单数据失败：', data.error);
+                window.location.href = '/static/login.html';
+            }
+        } catch (error) {
+            console.error('获取菜单数据时出错：', error);
+            window.location.href = '/static/login.html';
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

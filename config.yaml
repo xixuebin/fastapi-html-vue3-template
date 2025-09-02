@@ -7,20 +7,22 @@ users:
 menus:
   - id: welcome
     title: 主页
-    url: /welcome
+    url: /welcome.html
+    icon: home
     default: true
   - id: page1
     title: 页面一
-    url: /page1
+    url: /page1.html
+    icon: file
   - id: page2
     title: 页面二
-    url: /page2
+    url: /page2.html
   - id: offer_manage
     title: OFFER Manage
     children:
       - id: offer_create
         title: 创建 OFFER
-        url: /offer/create
+        url: /offer/create.html
       - id: offer_list
         title: OFFER List
-        url: /offer/list
+        url: /offer/list.html

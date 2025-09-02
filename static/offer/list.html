@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Offer 列表</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://unpkg.com/vue@3"></script>
 </head>
 <body>
+<div id="app">
     <div class="page-content">
         <h2>Offer 列表</h2>
         <table style="width:100%;margin-top:24px;">
@@ -13,15 +15,31 @@
                 <tr><th>标题</th><th>描述</th></tr>
             </thead>
             <tbody>
-                {% for offer in offers %}
-                <tr>
+                <tr v-for="offer in offers" :key="offer.title">
                     <td>{{ offer.title }}</td>
                     <td>{{ offer.desc }}</td>
                 </tr>
-                {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            offers: []
+        }
+    },
+    mounted() {
+        fetch('/api/offer/list')
+            .then(res => res.json())
+            .then(data => {
+                this.offers = data.offers || [];
+            });
+    }
+}).mount('#app');
+</script>
 </body>
 </html>
 

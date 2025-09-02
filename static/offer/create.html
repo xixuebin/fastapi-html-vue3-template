@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>创建 Offer</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://unpkg.com/vue@3"></script>
+</head>
+<body>
+<div id="app">
+    <div class="page-content">
+        <h2>创建 Offer</h2>
+        <form @submit.prevent="submitOffer">
+            <input type="text" v-model="title" placeholder="Offer 标题" required>
+            <input type="text" v-model="desc" placeholder="Offer 描述" required>
+            <button type="submit">提交</button>
+        </form>
+        <div v-if="error" class="error">{{ error }}</div>
+    </div>
+</div>
+<script>
+const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            title: '',
+            desc: '',
+            error: ''
+        }
+    },
+    methods: {
+        submitOffer() {
+            fetch('/offer/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `title=${encodeURIComponent(this.title)}&desc=${encodeURIComponent(this.desc)}`
+            }).then(res => {
+                if (res.redirected) {
+                    window.location.href = 'offer_list.html';
+                } else {
+                    this.error = '提交失败';
+                }
+            });
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
+
