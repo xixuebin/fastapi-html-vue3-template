@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文件管理</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .main-content {
+      padding: 20px;
+    }
+    .uploader {
+      margin-top: 20px; border: 2px dashed #bbb; border-radius: 8px; padding: 24px;
+      text-align: center; color: #666; transition: all .2s ease-in-out;
+    }
+    .uploader.dragging { border-color: #409eff; background: #f0f9ff; color: #333; }
+    .uploader .btn {
+      display: inline-block; margin-top: 8px; padding: 8px 14px; background: #409eff; color: #fff;
+      border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    .hint { color: #999; font-size: 12px; margin-top: 6px; }
+    .error { color: #d93025; margin-top: 10px; }
+    .success { color: #2e7d32; margin-top: 10px; }
+    .files-grid {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-gap: 15px;
+    }
+    .file-item {
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 12px;
+      transition: all 0.3s;
+    }
+    .file-item:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .file-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 10px;
+    }
+    .file-actions a {
+      color: #409eff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .file-actions a.delete {
+      color: #f56c6c;
+    }
+    .file-info {
+      display: flex;
+      justify-content: space-between;
+      color: #888;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div v-if="!loggedIn" class="login-redirect">
+      <p>请先登录系统</p>
+      <p><a href="/static/login.html">前往登录</a></p>
+    </div>
+    <div v-else class="main-content">
+      <h1>文件管理</h1>
+
+      <div class="uploader" :class="{ dragging }"
+           @dragover.prevent="onDragOver"
+           @dragleave.prevent="onDragLeave"
+           @drop.prevent="onDrop">
+        <div>拖拽文件到此处，或</div>
+        <label class="btn">
+          点击选择
+          <input type="file" @change="onSelect" hidden />
+        </label>
+        <div class="hint">支持的文件类型：TXT, PDF, PNG, JPG, JPEG, GIF, DOC, DOCX, XLS, XLSX</div>
+      </div>
+
+      <div v-if="error" class="error">{{ error }}</div>
+      <div v-if="success" class="success">{{ success }}</div>
+
+      <h2 style="margin-top: 24px;">已上传文件</h2>
+
+      <div v-if="sortedFiles.length > 0" class="files-grid">
+        <div class="file-item" v-for="file in sortedFiles" :key="file.name">
+          <div class="file-name">{{ file.name }}</div>
+          <div class="file-info">
+            <span>{{ formatSize(file.size) }}</span>
+            <span>{{ file.modified }}</span>
+          </div>
+          <div class="file-actions">
+            <a :href="file.path" target="_blank">下载</a>
+            <a href="javascript:void(0)" class="delete" @click="deleteFile(file.name)">删除</a>
+          </div>
+        </div>
+      </div>
+      <div v-else style="color:#aaa;margin-top:16px;">暂无已上传文件</div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3"></script>
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return {
+          files: [],
+          dragging: false,
+          error: '',
+          success: '',
+          loggedIn: false
+        };
+      },
+      computed: {
+        sortedFiles() {
+          // 按修改时间倒序排列
+          return [...this.files].sort((a, b) =>
+            new Date(b.modified) - new Date(a.modified)
+          );
+        }
+      },
+      methods: {
+        formatSize(bytes) {
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        async checkLoginStatus() {
+          try {
+            const response = await fetch('/api/home', {
+              credentials: 'include' // 确保发送cookies
+            });
+
+            if (response.status === 401) {
+              this.loggedIn = false;
+              return;
+            }
+
+            const data = await response.json();
+            if (data.success) {
+              this.loggedIn = true;
+              this.fetchFiles();
+            } else {
+              this.loggedIn = false;
+            }
+          } catch (error) {
+            console.error('检查登录状态出错:', error);
+            this.loggedIn = false;
+          }
+        },
+        async fetchFiles() {
+          try {
+            const response = await fetch('/api/files', {
+              credentials: 'include',
+              headers: {
+                'X-API-Token': localStorage.getItem('api_token') || ''
+              }
+            });
+
+            if (response.status === 401) {
+              this.error = '获取文件列表失败: 未授权';
+              return;
+            }
+
+            const data = await response.json();
+            this.files = data.files || [];
+          } catch (e) {
+            this.error = '获取文件列表失败: ' + (e.message || '未知错误');
+          }
+        },
+        async uploadFile(file) {
+          if (!file) return;
+          this.error = '';
+          this.success = '';
+
+          const allowedExt = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx'];
+          const ext = file.name.split('.').pop().toLowerCase();
+
+          if (!allowedExt.includes(ext)) {
+            this.error = `不支持的文件类型: ${ext}`;
+            return;
+          }
+
+          const fd = new FormData();
+          fd.append('file', file);
+
+          try {
+            const response = await fetch('/api/files/upload', {
+              method: 'POST',
+              body: fd,
+              credentials: 'include'
+            });
+
+            if (response.status === 401) {
+              this.error = '上传失败: 未授权';
+              return;
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+              this.error = data.detail || '上传失败';
+              return;
+            }
+
+            this.success = `上传成功: ${file.name}`;
+            await this.fetchFiles();
+          } catch (e) {
+            this.error = '上传失败: ' + (e.message || '未知错误');
+          }
+        },
+        async deleteFile(filename) {
+          if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
+
+          try {
+            const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+              method: 'DELETE',
+              credentials: 'include',
+              headers: {
+                'X-API-Token': localStorage.getItem('api_token') || ''
+              }
+            });
+
+            if (response.status === 401) {
+              this.error = '删除失败: 未授权';
+              return;
+            }
+
+            if (!response.ok) {
+              const data = await response.json();
+              this.error = data.detail || '删除失败';
+              return;
+            }
+
+            this.success = `文件 "${filename}" 已删除`;
+            await this.fetchFiles();
+          } catch (e) {
+            this.error = '删除失败: ' + (e.message || '未知错误');
+          }
+        },
+        onSelect(e) {
+          const file = e.target.files && e.target.files[0];
+          if (file) this.uploadFile(file);
+          e.target.value = '';
+        },
+        onDrop(e) {
+          const files = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : [];
+          files.forEach(f => this.uploadFile(f));
+          this.dragging = false;
+        },
+        onDragOver() { this.dragging = true; },
+        onDragLeave() { this.dragging = false; }
+      },
+      mounted() {
+        this.checkLoginStatus();
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
