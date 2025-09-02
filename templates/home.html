@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            margin: 0;
+            background: #f5f6fa;
+        }
+        .layout {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 220px;
+            background: #23272e;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding-top: 24px;
+        }
+        .sidebar h3 {
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        .menu {
+            flex: 1;
+        }
+        .menu a {
+            display: block;
+            padding: 14px 32px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            border-left: 4px solid transparent;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .menu a.active, .menu a:hover {
+            background: #31363f;
+            border-left: 4px solid #4f8cff;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f6fa;
+        }
+        .topbar {
+            height: 56px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4f8cff;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .settings {
+            color: #4f8cff;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 12px;
+        }
+        .content {
+            flex: 1;
+            padding: 32px;
+        }
+        .tabs {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #e1e1e1;
+            padding: 0 24px;
+            height: 44px;
+        }
+        .tab {
+            display: flex;
+            align-items: center;
+            background: #f5f6fa;
+            border: 1px solid #e1e1e1;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            margin-right: 8px;
+            padding: 0 16px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #222;
+            position: relative;
+        }
+        .tab.active {
+            background: #fff;
+            color: #4f8cff;
+            border-color: #4f8cff #e1e1e1 #fff #e1e1e1;
+            z-index: 2;
+        }
+        .tab .close {
+            margin-left: 8px;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .tab-content {
+            background: #fff;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            min-height: 300px;
+            padding: 32px;
+            margin: 0 24px 24px 24px;
+        }
+        .menu-group-title {
+            font-weight: bold;
+            padding: 10px 32px 6px 32px;
+            color: #bfc7d5;
+            font-size: 15px;
+            user-select: none;
+        }
+        .menu-sub {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 0 16px;
+            display: none;
+        }
+        .menu-sub.show {
+            display: block;
+        }
+        .menu-sub a {
+            padding-left: 16px;
+            font-size: 15px;
+        }
+        .menu-group-title span {
+            font-size: 12px;
+        }
+    </style>
+    <script>
+        // tab 管理
+        const tabList = [];
+        let activeTab = null;
+        const pageMap = {
+            {% macro page_map(menu) %}
+                {% if menu.children %}
+                    {% for child in menu.children %}
+                        {{ page_map(child) }}
+                    {% endfor %}
+                {% elif menu.url %}
+                    'menu-{{ menu.id }}': {id: '{{ menu.id }}', title: '{{ menu.title }}', url: '{{ menu.url }}'},
+                {% endif %}
+            {% endmacro %}
+            {% for menu in menus %}
+                {{ page_map(menu) }}
+            {% endfor %}
+        };
+        function openTab(menuId) {
+            const page = pageMap[menuId];
+            if (!page) return;
+            // 检查是否已打开
+            let tab = tabList.find(t => t.id === page.id);
+            if (!tab) {
+                tab = {id: page.id, title: page.title, url: page.url};
+                tabList.push(tab);
+                renderTabs();
+            }
+            setActiveTab(page.id);
+        }
+        function setActiveTab(tabId) {
+            activeTab = tabId;
+            renderTabs();
+            loadTabContent(tabId);
+        }
+        function closeTab(tabId) {
+            const idx = tabList.findIndex(t => t.id === tabId);
+            if (idx !== -1) {
+                tabList.splice(idx, 1);
+                if (activeTab === tabId) {
+                    // 切换到前一个 tab 或第一个 tab
+                    if (tabList.length > 0) {
+                        setActiveTab(tabList[Math.max(0, idx-1)].id);
+                    } else {
+                        document.getElementById('tab-content').innerHTML = '';
+                        activeTab = null;
+                        renderTabs();
+                    }
+                } else {
+                    renderTabs();
+                }
+            }
+        }
+        function renderTabs() {
+            const tabsDiv = document.getElementById('tabs');
+            tabsDiv.innerHTML = '';
+            tabList.forEach(tab => {
+                const tabEl = document.createElement('div');
+                tabEl.className = 'tab' + (tab.id === activeTab ? ' active' : '');
+                tabEl.innerHTML = tab.title + '<span class="close" onclick="event.stopPropagation();closeTab(\''+tab.id+'\')">×</span>';
+                tabEl.onclick = () => setActiveTab(tab.id);
+                tabsDiv.appendChild(tabEl);
+            });
+        }
+        async function loadTabContent(tabId) {
+            const tab = tabList.find(t => t.id === tabId);
+            if (!tab) return;
+            const res = await fetch(tab.url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const html = await res.text();
+            // 只取 <body> 内容
+            const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+            document.getElementById('tab-content').innerHTML = bodyMatch ? bodyMatch[1] : html;
+        }
+        window.onload = function() {
+            {% macro default_tab(menu) %}
+                {% if menu.default %}
+                    openTab('menu-{{ menu.id }}');
+                {% endif %}
+                {% if menu.children %}
+                    {% for child in menu.children %}
+                        {{ default_tab(child) }}
+                    {% endfor %}
+                {% endif %}
+            {% endmacro %}
+            {% for menu in menus %}
+                {{ default_tab(menu) }}
+            {% endfor %}
+        }
+        function toggleSubMenu(menuId) {
+            var ul = document.getElementById('menu-sub-' + menuId);
+            var arrow = document.getElementById('arrow-' + menuId);
+            if (ul) {
+                if (ul.classList.contains('show')) {
+                    ul.classList.remove('show');
+                    if (arrow) arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    ul.classList.add('show');
+                    if (arrow) arrow.style.transform = 'rotate(90deg)';
+                }
+            }
+        }
+    </script>
+    {% macro render_menu(menu) %}
+        {% if menu.children %}
+            <div class="menu-group">
+                <div class="menu-group-title" onclick="toggleSubMenu('{{ menu.id }}')" style="cursor:pointer;">
+                    {{ menu.title }}
+                    <span id="arrow-{{ menu.id }}" style="float:right;transition:transform 0.2s;">&#9654;</span>
+                </div>
+                <ul class="menu-sub" id="menu-sub-{{ menu.id }}">
+                    {% for child in menu.children %}
+                        <li>{{ render_menu(child) }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% else %}
+            <a href="javascript:void(0);" id="menu-{{ menu.id }}" onclick="openTab('menu-{{ menu.id }}')">{{ menu.title }}</a>
+        {% endif %}
+    {% endmacro %}
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h3>管理系统</h3>
+            <nav class="menu">
+                {% for menu in menus %}
+                    {{ render_menu(menu) }}
+                {% endfor %}
+            </nav>
+        </aside>
+        <main class="main">
+            <div class="topbar">
+                <div class="user-info">
+                    <div class="user-avatar">{{ username[0]|upper }}</div>
+                    <span>{{ username }}</span>
+                    <span class="settings" title="系统设置">⚙️</span>
+                    <a href="/logout" class="logout" style="margin-left:16px;">退出</a>
+                </div>
+            </div>
+            <div class="tabs" id="tabs"></div>
+            <div class="tab-content" id="tab-content"></div>
+        </main>
+    </div>
+</body>
+</html>
