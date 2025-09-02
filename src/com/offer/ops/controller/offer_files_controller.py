@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from src.com.offer.ops.security.auth import requires_login
 
 # 定义上传文件夹和允许的文件扩展名
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../uploads")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../../uploads")
 ALLOWED_EXTENSIONS = {"csv"}
 
 # 确保上传文件夹存在
