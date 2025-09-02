@@ -89,6 +89,7 @@
         </div>
         <div class="file-actions">
           <a :href="file.path" target="_blank">下载</a>
+            <a :href="'/api/files/view/' + encodeURIComponent(file.name)" target="_blank">查看</a>
           <a href="javascript:void(0)" class="delete" @click="deleteFile(file.name)">删除</a>
         </div>
       </div>
