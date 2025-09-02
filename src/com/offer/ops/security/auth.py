@@ -57,9 +57,18 @@ def requires_api_token():
             request = kwargs.get('request')
             if not request:
                 for arg in args:
-                    if hasattr(arg, 'headers'):
+                    if hasattr(arg, 'headers') or hasattr(arg, 'session'):
                         request = arg
                         break
+
+            # 首先检查用户是否已登录
+            if hasattr(request, 'session') and request.session.get("user"):
+                # 用户已登录，跳过 API token 校验
+                return await func(*args, **kwargs)
+
+            # 用户未登录，进行 API token 校验
+            if not hasattr(request, 'headers'):
+                raise HTTPException(status_code=401, detail="无法获取请求头信息")
 
             # 从请求头获取 API token
             api_token = request.headers.get("X-API-Token")
@@ -82,7 +91,13 @@ async def verify_login(request: Request):
     return username
 
 # API token 校验依赖（通过 Depends 方式）
-async def verify_api_token(x_api_token: str = Depends(api_key_header)):
+async def verify_api_token(request: Request, x_api_token: str = Depends(api_key_header)):
+    # 首先检查用户是否已登录
+    if request.session.get("user"):
+        # 用户已登录，跳过 API token 校验
+        return "session_authenticated"
+
+    # 用户未登录，进行 API token 校验
     if not x_api_token:
         raise HTTPException(status_code=401, detail="缺少 API token")
 

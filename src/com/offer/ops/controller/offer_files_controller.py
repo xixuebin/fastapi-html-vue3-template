@@ -1,16 +1,14 @@
 import os
 import time
-from typing import List
-from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from src.com.offer.ops.security.auth import requires_login, requires_api_token
 
 # 定义上传文件夹和允许的文件扩展名
-UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif", "doc", "docx", "xls", "xlsx"}
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../uploads")
+ALLOWED_EXTENSIONS = {"csv"}
 
 # 确保上传文件夹存在
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -34,10 +32,10 @@ def allowed_file(filename: str) -> bool:
 async def files_page(request: Request):
     return HTMLResponse(content=open("static/offer/files.html").read())
 
-# 文件列表 API
+# 文件列表 API - 从 requires_api_token 改为 requires_login
 @router.get("/api/files", response_class=JSONResponse, operation_id="list_files")
-@requires_api_token()
-async def list_files():
+@requires_login()  # 修改这里，允许已登录用户访问
+async def list_files(request: Request):
     files = []
     for name in os.listdir(UPLOAD_FOLDER):
         path = os.path.join(UPLOAD_FOLDER, name)
@@ -89,7 +87,7 @@ async def download_file(filename: str):
 
 # 删除文件 API
 @router.delete("/api/files/{filename}", response_class=JSONResponse, operation_id="delete_file")
-@requires_api_token()
+@requires_login
 async def delete_file(filename: str):
     file_path = os.path.join(UPLOAD_FOLDER, filename)
     if not os.path.exists(file_path):

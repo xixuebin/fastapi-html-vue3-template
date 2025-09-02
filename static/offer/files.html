@@ -76,7 +76,7 @@
           点击选择
           <input type="file" @change="onSelect" hidden />
         </label>
-        <div class="hint">支持的文件类型：TXT, PDF, PNG, JPG, JPEG, GIF, DOC, DOCX, XLS, XLSX</div>
+        <div class="hint">支持的文件类型：CSV</div>
       </div>
 
       <div v-if="error" class="error">{{ error }}</div>
@@ -176,7 +176,7 @@
           this.error = '';
           this.success = '';
 
-          const allowedExt = ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx'];
+          const allowedExt = ['csv'];
           const ext = file.name.split('.').pop().toLowerCase();
 
           if (!allowedExt.includes(ext)) {
