@@ -1,4 +1,4 @@
-# AD Offer Operations 后台管理系统
+# fastapi-html-vue3-template 后台管理系统
 
 这是一个基于 FastAPI 框架开发的 Offer 管理后台系统，提供了用户认证、页面访问控制、文件管理等功能。该项目采用前后端分离设计，后端使用 FastAPI 提供 API 服务，前端使用 HTML、CSS、JavaScript 以及 Vue.js 实现用户界面。
 
@@ -137,7 +137,7 @@ chmod +x run.sh
 ./run.sh help
 ```
 
-服务启动后，将在 http://localhost:8000 上运行。
+服务启动后，将在 http://localhost:5003 上运行。
 
 ### 手动启动应用
 
@@ -201,8 +201,8 @@ menus:
 
 系统启动后，可以通过以下 URL 访问自动生成的 API 文档：
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:5003/docs
+- ReDoc: http://localhost:5003/redoc
 
 ## 认证机制
 
