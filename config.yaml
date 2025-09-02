@@ -28,3 +28,7 @@ menus:
       - id: offer_list
         title: OFFER List
         url: /offer/list.html
+      - id: offer_files
+        title: 文件管理
+        url: /offer/files.html
+        icon: folder

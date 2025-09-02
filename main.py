@@ -3,13 +3,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi_mcp import FastApiMCP
 from starlette.middleware.sessions import SessionMiddleware
 
-from src.com.offer.ops.controller.user_controller import router as user_router
+from src.com.offer.ops.controller.auth_controller import router as user_router
 from src.com.offer.ops.controller.page_controller import router as page_router
 from src.com.offer.ops.controller.hello_controller import router as hello_router
 from src.com.offer.ops.controller.offer_create_controller import router as offer_router
 from src.com.offer.ops.controller.public_api_controller import router as public_api_router
 from src.com.offer.ops.controller.secure_api_controller import router as secure_api_router
 from src.com.offer.ops.middleware.static_middleware import AuthenticatedStaticFiles
+from src.com.offer.ops.controller.offer_files_controller import router as files_router
 
 app = FastAPI()
 
@@ -20,6 +21,8 @@ app.include_router(hello_router)
 app.include_router(offer_router)
 app.include_router(public_api_router)
 app.include_router(secure_api_router)
+
+app.include_router(files_router)
 
 # 将静态文件挂载放在最后，避免影响 API 路由
 app.mount("/static", StaticFiles(directory="static"), name="static")
