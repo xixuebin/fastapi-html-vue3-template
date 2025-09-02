@@ -2,6 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>后台管理系统</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/vue@3"></script>
@@ -14,11 +15,15 @@
             <nav class="menu">
                 <template v-for="menu in menus">
                     <div v-if="menu.children" class="menu-group">
-                        <div class="menu-group-title" @click="toggleSubMenu(menu.id)" style="cursor:pointer;">
+                        <div 
+                            class="menu-group-title" 
+                            :class="{ open: menu.open }"
+                            @click="toggleSubMenu(menu.id)" 
+                            style="cursor:pointer;"
+                        >
                             {{ menu.title }}
-                            <span :id="'arrow-' + menu.id" style="float:right;transition:transform 0.2s;">&#9654;</span>
                         </div>
-                        <ul class="menu-sub" :id="'menu-sub-' + menu.id" :class="{show: menu.open}">
+                        <ul class="menu-sub" :class="{show: menu.open}">
                             <li v-for="child in menu.children" :key="child.id">
                                 <a href="javascript:void(0);" @click="openTab(child)">{{ child.title }}</a>
                             </li>
@@ -31,11 +36,23 @@
         <main class="main">
             <div class="topbar">
                 <div class="user-info">
-                    <span>欢迎，{{ username }}</span>
+                    <div class="user-avatar">{{ usernameAvatar }}</div>
+                    <span>{{ username }}</span>
                     <a href="/static/login.html" class="logout">退出</a>
                 </div>
             </div>
-            <div class="content">
+            <div class="tabs" id="tabs">
+                <div 
+                    v-for="tab in tabs" 
+                    :key="tab.id" 
+                    :class="['tab', {active: tab.id === activeTab}]" 
+                    @click="setActiveTab(tab.id)"
+                >
+                    {{ tab.title }}
+                    <span class="close" @click.stop="closeTab(tab.id)">×</span>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-content">
                 <iframe v-if="activeTabUrl" :src="activeTabUrl" frameborder="0"></iframe>
                 <div v-else class="welcome">请选择菜单项</div>
             </div>
@@ -52,6 +69,11 @@ createApp({
             tabs: [],
             activeTab: '',
             activeTabUrl: ''
+        }
+    },
+    computed: {
+        usernameAvatar() {
+            return this.username ? this.username.charAt(0).toUpperCase() : '';
         }
     },
     methods: {
@@ -91,11 +113,6 @@ createApp({
             const menu = this.menus.find(m => m.id === menuId);
             if (menu) {
                 menu.open = !menu.open;
-                // 更新箭头图标
-                const arrow = document.getElementById('arrow-' + menuId);
-                if (arrow) {
-                    arrow.style.transform = menu.open ? 'rotate(90deg)' : 'rotate(0deg)';
-                }
             }
         }
     },
@@ -106,7 +123,7 @@ createApp({
 
             if (data.success) {
                 this.username = data.username;
-                this.menus = data.menus;
+                this.menus = data.menus.map(menu => ({...menu, open: false}));
 
                 // 处理菜单 URL，移除 static 前缀
                 const processMenuUrls = (menuItems) => {

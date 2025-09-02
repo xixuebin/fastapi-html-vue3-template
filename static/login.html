@@ -2,20 +2,23 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/vue@3"></script>
 </head>
 <body>
-<div id="app">
-    <div class="container">
-        <h2>用户登录</h2>
-        <form @submit.prevent="submitLogin">
-            <input type="text" v-model="username" placeholder="用户名" required>
-            <input type="password" v-model="password" placeholder="密码" required>
-            <button type="submit">登录</button>
-        </form>
-        <div v-if="error" class="error">{{ error }}</div>
+<div class="login-background">
+    <div id="app">
+        <div class="container">
+            <h2>用户登录</h2>
+            <form @submit.prevent="submitLogin">
+                <input type="text" v-model="username" placeholder="用户名" required>
+                <input type="password" v-model="password" placeholder="密码" required>
+                <button type="submit">登录</button>
+            </form>
+            <div v-if="error" class="error">{{ error }}</div>
+        </div>
     </div>
 </div>
 <script>
@@ -38,7 +41,7 @@ createApp({
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    window.location.href = '/static/index.html';
+                    window.location.href = '/';
                 } else {
                     this.error = data.error || '登录失败';
                 }
@@ -49,4 +52,3 @@ createApp({
 </script>
 </body>
 </html>
-
